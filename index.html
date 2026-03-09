@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rally Builder</title>
+
+  <!-- modern-normalize: -->
+  <style>*,::after,::before{box-sizing:border-box}html{font-family:system-ui,'Segoe UI',Roboto,Helvetica,Arial,sans-serif,'Apple Color Emoji','Segoe UI Emoji';line-height:1.15;-webkit-text-size-adjust:100%;tab-size:4}body{margin:0}b,strong{font-weight:bolder}code,kbd,pre,samp{font-family:ui-monospace,SFMono-Regular,Consolas,'Liberation Mono',Menlo,monospace;font-size:1em}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sub{bottom:-.25em}sup{top:-.5em}table{border-color:currentcolor}button,input,optgroup,select,textarea{font-family:inherit;font-size:100%;line-height:1.15;margin:0}[type=button],[type=reset],[type=submit],button{-webkit-appearance:button}legend{padding:0}progress{vertical-align:baseline}::-webkit-inner-spin-button,::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}summary{display:list-item}</style>
+
+  <!-- Leaflet: -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.4/css/all.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-extra-markers@1.2.1/dist/css/leaflet.extra-markers.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/leaflet-extra-markers@1.2.1/dist/js/leaflet.extra-markers.min.js"></script>
+  <!-- End leaflet -->
+
+  <style>
+    * {
+      border: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    :root { /* Light mode colors */
+      --bg-color: white;
+      --fg-color: black;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root { /* Dark mode */
+        --bg-color: black;
+        --fg-color: white;
+      }
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--fg-color);
+    }
+
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+    }
+    #abovemap {
+      flex: 1;
+      padding: 0.5rem;
+    }
+    #map {
+      flex: 1;
+    }
+    table {
+      border-collapse: collapse;
+    }
+    table td, table th {
+      padding: 0.5rem;
+      border: 1px solid #88888888;
+    }
+    .small-square {
+      width: 2rem;
+      height: 2rem;
+      background-color: #0dd;
+      border-radius: 0.3rem;
+      text-align: center;
+    }
+    .small-square:hover {
+      background-color: #0ff;
+    }
+    .small-square:active {
+      opacity: 0.5;
+    }
+    .not-square {
+      width: fit-content !important;
+      padding: 0 1rem;
+    }
+    td.nowrap {
+      white-space: nowrap;
+    }
+    button + button {
+      margin-left: 0.5rem;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="abovemap">
+    <h1>Rally Builder</h1>
+    <div id="places-table"></div>
+  </div>
+  <div id="map"></div>
+</body>
+
+<script>
+const data = {
+  places: [],
+};
+
+function round6(x) {
+  return Math.round((x + Number.EPSILON) * 1e6) / 1e6;
+}
+
+// 2. Add OpenStreetMap tiles
+// Satellite plus labels:
+const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+  maxZoom: 20,
+  attribution: '&copy; Esri'
+});//.addTo(map);
+// Labels over esri:
+// L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', {
+//     pane: 'markerPane', // This ensures labels sit ABOVE the map but BELOW popups
+//     pointerEvents: 'none' // Ensures clicks go THROUGH the labels to the map
+// }).addTo(map);
+
+// Retina:
+const streets = L.tileLayer('https://tiles.stadiamaps.com/tiles/outdoors/{z}/{x}/{y}{r}.png', {
+    maxZoom: 20,
+    attribution: '© Stadia Maps, © OpenMapTiles © OpenStreetMap contributors',
+});//.addTo(map);
+// Vanilla:
+// L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+//     attribution: '© OpenStreetMap',
+//     // detectRetina: true,
+// }).addTo(map);
+
+// Initialize the map:
+let initialLat = -33.85713072826933;
+let initialLng = 151.21483065914452;
+let initialZoom = 16;
+const mzcs = localStorage.getItem('mapZoomCenter');
+if (mzcs) {
+  const mzc = JSON.parse(mzcs);
+  if (mzc.zoom && mzc.center && mzc.center.lat && mzc.center.lng) {
+    initialLat = mzc.center.lat;
+    initialLng = mzc.center.lng;
+    initialZoom = mzc.zoom;
+  }
+}
+const map = L.map('map', {
+  center: [initialLat, initialLng],
+  zoom: initialZoom,
+  layers: [streets],
+});
+const baseMaps = {
+    "Streets": streets,
+    "Satellite": satellite,
+};
+L.control.layers(baseMaps).addTo(map);
+
+// 4. Listen for clicks
+map.on('click', function(e) {
+    const lat = round6(e.latlng.lat);
+    const lng = round6(e.latlng.lng);
+
+    // Update or create the marker
+    // if (marker) {
+    //     marker.setLatLng(e.latlng);
+    // } else {
+    const newIndex = data.places.length;
+    const newNumber = newIndex + 1;
+    const myIcon = L.ExtraMarkers.icon({
+        icon: 'fa-number',
+        number: newNumber.toString(),
+        markerColor: 'cyan',
+        shape: 'star',
+        prefix: 'fa'
+    });
+    marker = L.marker(e.latlng, {
+      title: 'First stop',
+      icon: myIcon,
+      draggable: true,
+      autoPan: true, // Move the map if you drag to edge.
+      customPlaceIndex: newIndex,
+    }).addTo(map);
+    marker.on('dragend', function(event) {
+      const pos = event.target.getLatLng();
+      // document.getElementById('coords').value = `${pos.lat}, ${pos.lng}`;
+    });
+
+    data.places.push({
+      lat,
+      lng,
+      name: 'Some place',
+      nearby: 'Place is near!',
+      clue1: 'Some cryptic clue...',
+      clue2: 'A less-cryptic clue...',
+      clue3: 'An easy clue...',
+    });
+    updateTable();
+    // }
+
+    // Update the input field
+    // document.getElementById('coords').value = `${lat}, ${lng}`;
+});
+
+// Remember last map location:
+function saveZoomAndCenter() {
+  const currentZoom = map.getZoom();
+  const currentCenter = map.getCenter();
+  localStorage.setItem('mapZoomCenter', JSON.stringify({
+      zoom: currentZoom,
+      center: currentCenter
+  }));
+}
+map.on('moveend', saveZoomAndCenter);
+map.on('zoomend', saveZoomAndCenter);
+
+// Update the UI:
+function updateTable() {
+  const div = document.getElementById('places-table');
+  const table = document.createElement('table');
+  const thead = document.createElement('thead');
+  const headtr = document.createElement('tr');
+  function appendTh(textContent) {
+    const th = document.createElement('th');
+    th.textContent = textContent;
+    headtr.appendChild(th);
+  }
+  appendTh('#');
+  appendTh('Name');
+  appendTh('Clue 1');
+  appendTh('Clue 2');
+  appendTh('Clue 3');
+  appendTh('Nearby');
+  appendTh('Actions');
+  thead.appendChild(headtr);
+  table.appendChild(thead);
+  const tbody = document.createElement('tbody');
+  let placeIndex = 0;
+  for (const place of data.places) {
+    const tr = document.createElement('tr');
+    function appendTd(textContent) {
+      const td = document.createElement('td');
+      td.textContent = textContent;
+      tr.appendChild(td);
+    }
+    appendTd(placeIndex + 1);
+    appendTd(place.name);
+    appendTd(place.clue1);
+    appendTd(place.clue2);
+    appendTd(place.clue3);
+    appendTd(place.nearby);
+    const td = document.createElement('td');
+    td.classList.add('nowrap');
+    function appendButton(innerHTML, title, click) {
+      const b = document.createElement('button');
+      b.classList.add('small-square');
+      b.title = title;
+      b.innerHTML = innerHTML;
+      b.onclick = click;
+      td.appendChild(b);
+    }
+    const thisIndex = placeIndex;
+    appendButton('&uarr;', 'Up', () => { onMoveUp(thisIndex) });
+    appendButton('&darr;', 'Down', () => { onMoveDown(thisIndex) });
+    appendButton('&#9998;', 'Edit', () => { onEdit(thisIndex) });
+    appendButton('&#x2715;', 'Delete', () => { onDelete(thisIndex) });
+    appendButton('&#x1F441;', 'Map', () => { onView(thisIndex) });
+    tr.appendChild(td);
+    tbody.appendChild(tr)
+    placeIndex += 1;
+  }
+  table.appendChild(tbody);
+  div.replaceChildren(table);
+}
+updateTable();
+
+function onMoveUp(index) {
+  if (index > 0) {
+    const temp = data.places[index-1];
+    data.places[index-1] = data.places[index];
+    data.places[index] = temp;
+  }
+  updateTable();
+}
+function onMoveDown(index) {
+  if (index < data.places.length-1) {
+    const temp = data.places[index+1];
+    data.places[index+1] = data.places[index];
+    data.places[index] = temp;
+  }
+  updateTable();
+}
+function onEdit(index) {
+  alert(`Edit ${index}`);
+}
+function onDelete(index) {
+  const confirm = window.confirm(`Are you sure you want to delete ${data.places[index].name}?`);
+  if (confirm) {
+    data.places.splice(index, 1);
+  }
+  updateTable();
+}
+function onView(index) {
+  let place = data.places[index];
+  map.panTo(new L.LatLng(place.lat, place.lng));
+}
+
+</script>
+
+</html>
