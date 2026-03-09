@@ -27,3 +27,5 @@ To use Geolocation, HTTPS is essential. When developing, use Caddy to get https,
 ## Etc
 
 ![Tank](https://github.com/chrishulbert/rally/raw/main/readme/tank.png)
+
+[What are these images?](https://en.wikipedia.org/wiki/Dune_II)
