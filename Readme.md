@@ -1,10 +1,14 @@
 # Rally
 
+![Quad](https://github.com/chrishulbert/rally/raw/main/readme/quad.png)
+
 A builder and player for rally challenges. Eg multiple teams in multiple cars, driving around, following clues between waypoints to a final destination.
 
 Work in progress!
 
 ## HTTPS
+
+![Trike](https://github.com/chrishulbert/rally/raw/main/readme/trike.png)
 
 To use Geolocation, HTTPS is essential. When developing, use Caddy to get https, like so:
 
@@ -19,3 +23,7 @@ To use Geolocation, HTTPS is essential. When developing, use Caddy to get https,
 * Then open https://localhost in browser, should be ok
 * The Makefile has a target to automate this:
     * `make serve`
+
+## Etc
+
+![Tank](https://github.com/chrishulbert/rally/raw/main/readme/tank.png)
