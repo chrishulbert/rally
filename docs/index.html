@@ -145,20 +145,19 @@ const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/servi
 //     pointerEvents: 'none' // Ensures clicks go THROUGH the labels to the map
 // }).addTo(map);
 
-// Retina:
-const streets = L.tileLayer('https://tiles.stadiamaps.com/tiles/outdoors/{z}/{x}/{y}{r}.png', {
-    maxZoom: 20,
-    attribution: '© Stadia Maps, © OpenMapTiles © OpenStreetMap contributors',
-});//.addTo(map);
+// Retina (but requires api key):
+// const streets = L.tileLayer('https://tiles.stadiamaps.com/tiles/outdoors/{z}/{x}/{y}{r}.png', {
+//     maxZoom: 20,
+//     attribution: '© Stadia Maps, © OpenMapTiles © OpenStreetMap contributors',
+// });
 // Vanilla:
-// L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-//     attribution: '© OpenStreetMap',
-//     // detectRetina: true,
-// }).addTo(map);
+const streets = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap',
+});
 
 // Initialize the map:
-let initialLat = -33.85713072826933;
-let initialLng = 151.21483065914452;
+let initialLat = -33.857130;
+let initialLng = 151.214830;
 let initialZoom = 16;
 const mzcs = localStorage.getItem('mapZoomCenter');
 if (mzcs) {
