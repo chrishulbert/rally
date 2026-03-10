@@ -5,6 +5,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Rally Builder</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
 
   <!-- modern-normalize: -->
   <style>*,::after,::before{box-sizing:border-box}html{font-family:system-ui,'Segoe UI',Roboto,Helvetica,Arial,sans-serif,'Apple Color Emoji','Segoe UI Emoji';line-height:1.15;-webkit-text-size-adjust:100%;tab-size:4}body{margin:0}b,strong{font-weight:bolder}code,kbd,pre,samp{font-family:ui-monospace,SFMono-Regular,Consolas,'Liberation Mono',Menlo,monospace;font-size:1em}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sub{bottom:-.25em}sup{top:-.5em}table{border-color:currentcolor}button,input,optgroup,select,textarea{font-family:inherit;font-size:100%;line-height:1.15;margin:0}[type=button],[type=reset],[type=submit],button{-webkit-appearance:button}legend{padding:0}progress{vertical-align:baseline}::-webkit-inner-spin-button,::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}summary{display:list-item}</style>
@@ -54,6 +55,8 @@
     #abovemap {
       flex: 1;
       padding: 0.5rem;
+      overflow-y: auto; /* Enables vertical scrolling */
+      min-height: 0; /* The "Magic" fix: allows the item to be smaller than its content */
     }
     #map {
       flex: 1;
@@ -88,21 +91,43 @@
     button + button {
       margin-left: 0.5rem;
     }
+    td a {
+      color: var(--fg-color);
+      text-decoration: none;
+    }
+    td a:hover {
+      text-decoration: underline;
+    }
+    td a:active {
+      opacity: 0.5;
+    }
+    .click-to-add {
+      margin: 1rem 0;
+    }
   </style>
 </head>
 
 <body>
   <div id="abovemap">
-    <h1>Rally Builder</h1>
     <div id="places-table"></div>
+    <p class="click-to-add"">Click on the map to add a waypoint.</p>
+    <button class="small-square not-square" onclick="publish()">Publish</button>
   </div>
   <div id="map"></div>
 </body>
 
 <script>
-const data = {
-  places: [],
-};
+function load() {
+  const str = localStorage.getItem('data');
+  if (str) {
+    return JSON.parse(str);
+  } else {
+    return {
+      places: [],
+    }
+  }
+}
+const data = load();
 
 function round6(x) {
   return Math.round((x + Number.EPSILON) * 1e6) / 1e6;
@@ -154,51 +179,18 @@ const baseMaps = {
     "Satellite": satellite,
 };
 L.control.layers(baseMaps).addTo(map);
-
-// 4. Listen for clicks
+const markerGroup = L.layerGroup().addTo(map);
 map.on('click', function(e) {
-    const lat = round6(e.latlng.lat);
-    const lng = round6(e.latlng.lng);
-
-    // Update or create the marker
-    // if (marker) {
-    //     marker.setLatLng(e.latlng);
-    // } else {
-    const newIndex = data.places.length;
-    const newNumber = newIndex + 1;
-    const myIcon = L.ExtraMarkers.icon({
-        icon: 'fa-number',
-        number: newNumber.toString(),
-        markerColor: 'cyan',
-        shape: 'star',
-        prefix: 'fa'
-    });
-    marker = L.marker(e.latlng, {
-      title: 'First stop',
-      icon: myIcon,
-      draggable: true,
-      autoPan: true, // Move the map if you drag to edge.
-      customPlaceIndex: newIndex,
-    }).addTo(map);
-    marker.on('dragend', function(event) {
-      const pos = event.target.getLatLng();
-      // document.getElementById('coords').value = `${pos.lat}, ${pos.lng}`;
-    });
-
     data.places.push({
-      lat,
-      lng,
+      lat: round6(e.latlng.lat),
+      lng: round6(e.latlng.lng),
       name: 'Some place',
       nearby: 'Place is near!',
       clue1: 'Some cryptic clue...',
-      clue2: 'A less-cryptic clue...',
-      clue3: 'An easy clue...',
+      clue2: 'Easy clue...',
     });
-    updateTable();
-    // }
-
-    // Update the input field
-    // document.getElementById('coords').value = `${lat}, ${lng}`;
+    update();
+    save();
 });
 
 // Remember last map location:
@@ -228,7 +220,6 @@ function updateTable() {
   appendTh('Name');
   appendTh('Clue 1');
   appendTh('Clue 2');
-  appendTh('Clue 3');
   appendTh('Nearby');
   appendTh('Actions');
   thead.appendChild(headtr);
@@ -236,18 +227,27 @@ function updateTable() {
   const tbody = document.createElement('tbody');
   let placeIndex = 0;
   for (const place of data.places) {
+    const thisIndex = placeIndex;
     const tr = document.createElement('tr');
     function appendTd(textContent) {
       const td = document.createElement('td');
       td.textContent = textContent;
       tr.appendChild(td);
     }
+    function appendEditableTd(index, field) {
+      const td = document.createElement('td');
+      const a = document.createElement('a');
+      a.href='#';
+      a.textContent = place[field];
+      a.onclick = () => { onEdit(index, field); return false };
+      td.appendChild(a);
+      tr.appendChild(td);
+    }
     appendTd(placeIndex + 1);
-    appendTd(place.name);
-    appendTd(place.clue1);
-    appendTd(place.clue2);
-    appendTd(place.clue3);
-    appendTd(place.nearby);
+    appendEditableTd(thisIndex, 'name');
+    appendEditableTd(thisIndex, 'clue1');
+    appendEditableTd(thisIndex, 'clue2');
+    appendEditableTd(thisIndex, 'nearby');
     const td = document.createElement('td');
     td.classList.add('nowrap');
     function appendButton(innerHTML, title, click) {
@@ -258,10 +258,8 @@ function updateTable() {
       b.onclick = click;
       td.appendChild(b);
     }
-    const thisIndex = placeIndex;
     appendButton('&uarr;', 'Up', () => { onMoveUp(thisIndex) });
     appendButton('&darr;', 'Down', () => { onMoveDown(thisIndex) });
-    appendButton('&#9998;', 'Edit', () => { onEdit(thisIndex) });
     appendButton('&#x2715;', 'Delete', () => { onDelete(thisIndex) });
     appendButton('&#x1F441;', 'Map', () => { onView(thisIndex) });
     tr.appendChild(td);
@@ -271,7 +269,39 @@ function updateTable() {
   table.appendChild(tbody);
   div.replaceChildren(table);
 }
-updateTable();
+function updateMap() {
+  markerGroup.clearLayers();
+  let placeIndex = 0;
+  for (const place of data.places) {
+    const indexCopy = placeIndex;
+    const number = indexCopy + 1;
+    const myIcon = L.ExtraMarkers.icon({
+        icon: 'fa-number',
+        number: number.toString(),
+        markerColor: 'cyan',
+        shape: 'star',
+        prefix: 'fa'
+    });
+    marker = L.marker([place.lat, place.lng], {
+      title: place.name,
+      icon: myIcon,
+      draggable: true,
+      autoPan: true, // Move the map if you drag to edge.
+    }).addTo(markerGroup);
+    marker.on('dragend', function(event) {
+      const pos = event.target.getLatLng();
+      data.places[indexCopy].lat = round6(pos.lat);
+      data.places[indexCopy].lng = round6(pos.lng);
+      save();
+    });
+    placeIndex += 1;
+  }
+}
+function update() {
+  updateTable();
+  updateMap();
+}
+update();
 
 function onMoveUp(index) {
   if (index > 0) {
@@ -279,7 +309,8 @@ function onMoveUp(index) {
     data.places[index-1] = data.places[index];
     data.places[index] = temp;
   }
-  updateTable();
+  update();
+  save();
 }
 function onMoveDown(index) {
   if (index < data.places.length-1) {
@@ -287,23 +318,62 @@ function onMoveDown(index) {
     data.places[index+1] = data.places[index];
     data.places[index] = temp;
   }
-  updateTable();
+  update();
+  save();
 }
-function onEdit(index) {
-  alert(`Edit ${index}`);
+function onEdit(index, field) {  
+  let text = prompt(`Edit ${field}:`, data.places[index][field]);
+  if (text) {
+    data.places[index][field] = text.trim();
+    update();
+    save();
+  }
 }
 function onDelete(index) {
   const confirm = window.confirm(`Are you sure you want to delete ${data.places[index].name}?`);
   if (confirm) {
     data.places.splice(index, 1);
   }
-  updateTable();
+  update();
+  save();
 }
 function onView(index) {
   let place = data.places[index];
   map.panTo(new L.LatLng(place.lat, place.lng));
 }
-
+function save() {
+  localStorage.setItem('data', JSON.stringify(data));
+}
+async function publish() {
+  const encoder = new TextEncoder();
+  const dataStr = JSON.stringify(data);
+  const dataU8Arr = encoder.encode(dataStr);
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const pwHash = await crypto.subtle.digest('SHA-256', encoder.encode('rally'));
+  const key = await crypto.subtle.importKey('raw', pwHash, 'AES-GCM', false, ['encrypt']);
+  const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, dataU8Arr);
+  const ivb64 = await base64(iv);
+  const ctb64 = await base64(ciphertext);
+  const params = {
+    i: ivb64,
+    c: ctb64,
+  }
+  const query = new URLSearchParams(params).toString();
+  alert(query.length);
+  alert(query);
+}
+// Takes Uint8Array or ArrayBuffer.
+async function base64(data) {
+  const blob = new Blob([data]);
+  const base64 = await new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64 = reader.result.split(',')[1];
+      resolve(base64);
+    };
+    reader.readAsDataURL(blob);
+  });
+  return base64;
+}
 </script>
-
 </html>

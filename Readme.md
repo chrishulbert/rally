@@ -2,7 +2,7 @@
 
 ![Quad](https://github.com/chrishulbert/rally/raw/main/readme/quad.png)
 
-A builder and player for rally challenges. Eg multiple teams in multiple cars, driving around, following clues between waypoints to a final destination.
+A builder and player for rally challenges. Eg multiple teams in multiple cars, in real life, driving around, following clues between waypoints to a final destination.
 
 Work in progress!
 
