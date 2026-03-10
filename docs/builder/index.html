@@ -346,6 +346,10 @@ function save() {
   localStorage.setItem('data', JSON.stringify(data));
 }
 async function publish() {
+  if (data.places.length == 0) {
+    alert('Click on the map to add some places first!');
+    return;
+  }
   const encoder = new TextEncoder();
   const dataStr = JSON.stringify(data);
   const dataU8Arr = encoder.encode(dataStr);
@@ -353,24 +357,25 @@ async function publish() {
   const pwHash = await crypto.subtle.digest('SHA-256', encoder.encode('rally'));
   const key = await crypto.subtle.importKey('raw', pwHash, 'AES-GCM', false, ['encrypt']);
   const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, dataU8Arr);
-  const ivb64 = await base64(iv);
-  const ctb64 = await base64(ciphertext);
+  const ivb64 = await urlsafeBase64(iv);
+  const ctb64 = await urlsafeBase64(ciphertext);
   const params = {
     i: ivb64,
     c: ctb64,
   }
   const query = new URLSearchParams(params).toString();
-  alert(query.length);
-  alert(query);
+  const link = 'https://chrishulbert.github.io/rally/play/?' + query;
+  prompt('Here is the link to your rally! It is recommended that you copy this, go to tinyurl.com, paste it where it says "Paste long URL here", then click "Shorten Link", then share that link/QR with your friends at the start of your rally.', link);
 }
 // Takes Uint8Array or ArrayBuffer.
-async function base64(data) {
+async function urlsafeBase64(data) {
   const blob = new Blob([data]);
   const base64 = await new Promise((resolve) => {
     const reader = new FileReader();
     reader.onloadend = () => {
       const base64 = reader.result.split(',')[1];
-      resolve(base64);
+      const safe = base64.replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '');
+      resolve(safe);
     };
     reader.readAsDataURL(blob);
   });
