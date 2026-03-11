@@ -135,7 +135,7 @@ function onPosition(position) {
       clue2Timeout = Date.now() + 5*60*1000; // 5 mins.
       localStorage.setItem(gameId, p.name);
     } else if (nextMetres < 300) { // Almost there...
-      text = p.nearby
+      text = next.nearby
     } else {
       const clue = Date.now() > clue2Timeout ? next.clue2 : next.clue1;
       if (current) {
