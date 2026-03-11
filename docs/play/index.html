@@ -84,7 +84,6 @@ async function parse() {
   const plaintext = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: ivBuffer }, key, ciphertextBuffer);
   const plainStr = new TextDecoder().decode(plaintext);
   const data = JSON.parse(plainStr);
-  console.log(data);
   places = data.places;
   gameId = data.gameId;
 }
