@@ -124,26 +124,35 @@ function currentAndNext() {
     nextNext: places[1],
   }
 }
+function makeFoundNextText(foundPlace, nextPlace) {
+  const found = `<p><em><small>You found:</small></em></p><p>${foundPlace.name}</p>`;
+  let next = '';
+  if (nextPlace) {
+    const clue = Date.now() > clue2Timeout ? nextPlace.clue2 : nextPlace.clue1;
+    next = `<p><em><small>Next clue:</small></em></p><p>${clue}</p>`;
+  } else {
+    next = '<p><em>Finished!</em></p><p>🏁</p>';
+  }
+  return found + next;
+}
 function onPosition(position) {
   let text = 'Location unavailable.'
   if (!!position.coords.latitude && !!position.coords.longitude) {
     const { current, next, nextNext } = currentAndNext();
     const nextMetres = distance(position.coords.latitude, position.coords.longitude, next.lat, next.lng, 'K') * 1000.0;
     if (nextMetres < 100) { // Found the next!
-      text = `<p><em><small>You found:</small></em></p><p>${next.name}</p><p><em><small>Next clue:</small></em></p><p>${nextNext.clue1}</p>`
       clue2Timeout = Date.now() + 5*60*1000; // 5 mins.
-      localStorage.setItem(gameId, p.name);
+      text = makeFoundNextText(next, nextNext);
+      localStorage.setItem(gameId, next.name);
     } else if (nextMetres < 300) { // Almost there...
       text = next.nearby
     } else {
-      const clue = Date.now() > clue2Timeout ? next.clue2 : next.clue1;
       if (current) {
-        text = `<p><em><small>You found:</small></em></p><p>${current.name}</p><p><em><small>Next clue:</small></em></p><p>${clue}</p>`
+        text = makeFoundNextText(current, next);
       } else { // At the start.
         text = `<p><em><small>First clue:</small></em></p><p>${clue}</p>`
       }
     }
-    text += ' (low accuracy)'
   }
   display(text)
 }

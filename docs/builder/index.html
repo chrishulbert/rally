@@ -230,9 +230,10 @@ function updateTable() {
   for (const place of data.places) {
     const thisIndex = placeIndex;
     const tr = document.createElement('tr');
-    function appendTd(textContent) {
+    function appendTd(textContent, title) {
       const td = document.createElement('td');
       td.textContent = textContent;
+      td.title = title;
       tr.appendChild(td);
     }
     function appendEditableTd(index, field) {
@@ -244,7 +245,7 @@ function updateTable() {
       td.appendChild(a);
       tr.appendChild(td);
     }
-    appendTd(placeIndex + 1);
+    appendTd(placeIndex + 1, `Lat: ${place.lat}, long: ${place.lng}`);
     appendEditableTd(thisIndex, 'name');
     appendEditableTd(thisIndex, 'clue1');
     appendEditableTd(thisIndex, 'clue2');
