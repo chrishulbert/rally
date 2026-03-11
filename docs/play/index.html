@@ -150,6 +150,7 @@ function onPosition(position) {
       if (current) {
         text = makeFoundNextText(current, next);
       } else { // At the start.
+        const clue = Date.now() > clue2Timeout ? next.clue2 : next.clue1;
         text = `<p><em><small>First clue:</small></em></p><p>${clue}</p>`
       }
     }
