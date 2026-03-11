@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rally</title>
+
+<style>
+/* modern-normalize */
+*,::after,::before{box-sizing:border-box}html{font-family:system-ui,'Segoe UI',Roboto,Helvetica,Arial,sans-serif,'Apple Color Emoji','Segoe UI Emoji';line-height:1.15;-webkit-text-size-adjust:100%;tab-size:4}body{margin:0}b,strong{font-weight:bolder}code,kbd,pre,samp{font-family:ui-monospace,SFMono-Regular,Consolas,'Liberation Mono',Menlo,monospace;font-size:1em}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sub{bottom:-.25em}sup{top:-.5em}table{border-color:currentcolor}button,input,optgroup,select,textarea{font-family:inherit;font-size:100%;line-height:1.15;margin:0}[type=button],[type=reset],[type=submit],button{-webkit-appearance:button}legend{padding:0}progress{vertical-align:baseline}::-webkit-inner-spin-button,::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}summary{display:list-item}
+</style>
+
+<style>
+
+:root { /* Light mode colors */
+  --bg-color: white;
+  --fg-color: black;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root { /* Dark mode */
+    --bg-color: black;
+    --fg-color: white;
+  }
+}
+
+body {
+  background-color: var(--bg-color);
+  color: var(--fg-color);
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  width: 100%;
+  text-align: center;
+}
+
+</style>
+</head>
+
+<body>
+  <div class="container">
+    <h1 id="text">Loading...</h1>
+  </div>
+</body>
+
+<script>
+let places = [];
+let gameId = '';
+let clue2Timeout = Date.now() + 5*60*1000; // JS timestamp for when clue2 should be shown.
+document.addEventListener("DOMContentLoaded", myLoad)
+async function myLoad() {
+  await parse();
+  if ("geolocation" in navigator) {
+    watch()
+  } else {
+    display('Error: Your browser does not support Geolocation.')
+  }
+}
+async function parse() {
+  const queryString = window.location.search;
+  const urlParams = new URLSearchParams(queryString);
+  const iv = urlParams.get('i');
+  const ciphertext = urlParams.get('c');
+  if (!iv || !ciphertext) { alert('Invalid link!') }
+  const ivBlob = await blobFromUrlSafeBase64(iv);
+  const ciphertextBlob = await blobFromUrlSafeBase64(ciphertext);
+  const ivBuffer = await ivBlob.arrayBuffer();
+  const ciphertextBuffer = await ciphertextBlob.arrayBuffer();
+  const encoder = new TextEncoder();
+  const pwHash = await crypto.subtle.digest('SHA-256', encoder.encode('rally'));
+  const key = await crypto.subtle.importKey('raw', pwHash, 'AES-GCM', false, ['decrypt']);
+  const plaintext = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: ivBuffer }, key, ciphertextBuffer);
+  const plainStr = new TextDecoder().decode(plaintext);
+  const data = JSON.parse(plainStr);
+  console.log(data);
+  places = data.places;
+  gameId = data.gameId;
+}
+function watch() {
+  const options = { enableHighAccuracy: true }
+  navigator.geolocation.watchPosition(onPosition, onError, options)
+}
+function distance(lat1, lon1, lat2, lon2, unit) {
+  var radlat1 = Math.PI * lat1/180
+  var radlat2 = Math.PI * lat2/180
+  var radlon1 = Math.PI * lon1/180
+  var radlon2 = Math.PI * lon2/180
+  var theta = lon1-lon2
+  var radtheta = Math.PI * theta/180
+  var dist = Math.sin(radlat1) * Math.sin(radlat2) + Math.cos(radlat1) * Math.cos(radlat2) * Math.cos(radtheta);
+  dist = Math.acos(dist)
+  dist = dist * 180/Math.PI
+  dist = dist * 60 * 1.1515
+  if (unit=="K") { dist = dist * 1.609344 }
+  if (unit=="N") { dist = dist * 0.8684 }
+  return dist
+}
+// Finds the current place and the next one.
+function currentAndNext() {
+  const lastVisitedPlaceName = localStorage.getItem(gameId); // Name of the most recently found place.
+  for (let i=0; i<places.length; i++) {
+    if (places[i].name === lastVisitedPlaceName) {
+      return {
+        current: places[i],
+        next: places[i+1],
+        nextNext: places[i+2],
+      }
+    }
+  }
+  return {
+    current: null,
+    next: places[0],
+    nextNext: places[1],
+  }
+}
+function onPosition(position) {
+  let text = 'Location unavailable.'
+  if (!!position.coords.latitude && !!position.coords.longitude) {
+    const { current, next, nextNext } = currentAndNext(lastVisitedPlaceName);
+    const nextMetres = distance(position.coords.latitude, position.coords.longitude, next.lat, next.lng, 'K') * 1000.0;
+    if (nextMetres < 100) { // Found the next!
+      text = `<p><em><small>You found:</small></em></p><p>${next.name}</p><p><em><small>Next clue:</small></em></p><p>${nextNext.clue1}</p>`
+      clue2Timeout = Date.now() + 5*60*1000; // 5 mins.
+      localStorage.setItem(gameId, p.name);
+    } else if (nextMetres < 300) { // Almost there...
+      text = p.nearby
+    } else {
+      const clue = Date.now() > clue2Timeout ? next.clue2 : next.clue1;
+      if (current) {
+        text = `<p><em><small>You found:</small></em></p><p>${current.name}</p><p><em><small>Next clue:</small></em></p><p>${clue}</p>`
+      } else { // At the start.
+        text = `<p><em><small>First clue:</small></em></p><p>${clue}</p>`
+      }
+    }
+    text += ' (low accuracy)'
+  }
+  display(text)
+}
+function onError(geolocationError) {
+  if (geolocationError.message) {
+    display('Error: ' + geolocationError.message)
+  } else if (geolocationError.code === 1) {
+    display('Location permission denied! Go into your settings and allow it.')
+  } else if (geolocationError.code === 2) {
+    display('Location position unavailable. Check that it is allowed in your settings?')
+  } else if (geolocationError.code === 3) {
+    display('Timeout.')
+  } else {
+    display('Unknown error.')
+  }
+}
+function display(message) {
+  document.getElementById('text').innerHTML = message
+}
+async function blobFromUrlSafeBase64(str) {
+  const b64 = str.replaceAll('-', '+').replaceAll('_', '/');
+  const withHeader = 'data:application/octet-stream;base64,' + b64;
+  const response = await fetch(withHeader);
+  const blob = await response.blob();
+  return blob;
+}
+</script>
+
+</html>

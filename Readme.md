@@ -4,7 +4,7 @@
 
 A builder and player for rally challenges. Eg multiple teams in multiple cars, in real life, driving around, following clues between waypoints to a final destination.
 
-Work in progress!
+To get started, go here: [chrishulbert.github.io/rally](https://chrishulbert.github.io/rally/builder/)
 
 ## HTTPS
 

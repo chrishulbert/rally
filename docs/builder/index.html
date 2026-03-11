@@ -350,6 +350,7 @@ async function publish() {
     alert('Click on the map to add some places first!');
     return;
   }
+  data.gameId = crypto.randomUUID();
   const encoder = new TextEncoder();
   const dataStr = JSON.stringify(data);
   const dataU8Arr = encoder.encode(dataStr);
