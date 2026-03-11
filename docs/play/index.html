@@ -128,7 +128,7 @@ function currentAndNext() {
 function onPosition(position) {
   let text = 'Location unavailable.'
   if (!!position.coords.latitude && !!position.coords.longitude) {
-    const { current, next, nextNext } = currentAndNext(lastVisitedPlaceName);
+    const { current, next, nextNext } = currentAndNext();
     const nextMetres = distance(position.coords.latitude, position.coords.longitude, next.lat, next.lng, 'K') * 1000.0;
     if (nextMetres < 100) { // Found the next!
       text = `<p><em><small>You found:</small></em></p><p>${next.name}</p><p><em><small>Next clue:</small></em></p><p>${nextNext.clue1}</p>`
