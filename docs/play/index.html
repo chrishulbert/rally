@@ -140,7 +140,7 @@ function onPosition(position) {
   if (!!position.coords.latitude && !!position.coords.longitude) {
     const { current, next, nextNext } = currentAndNext();
     const nextMetres = next ? (distance(position.coords.latitude, position.coords.longitude, next.lat, next.lng, 'K') * 1000.0) : null;
-    if (next && nextMetres < 100) { // Found the next!
+    if (next && nextMetres < 50) { // Found the next!
       clue2Timeout = Date.now() + 5*60*1000; // 5 mins.
       text = makeFoundNextText(next, nextNext);
       localStorage.setItem(gameId, next.name);
