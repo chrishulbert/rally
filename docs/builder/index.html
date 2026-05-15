@@ -367,7 +367,8 @@ async function publish() {
   }
   const query = new URLSearchParams(params).toString();
   const link = 'https://chrishulbert.github.io/rally/play/?' + query;
-  prompt('Here is the link to your rally! It is recommended that you copy this, go to tinyurl.com, paste it where it says "Paste long URL here", then click "Shorten Link", then share that link/QR with your friends at the start of your rally.', link);
+  await navigator.clipboard.writeText(link);
+  alert('The link to your rally has been copied to your clipboard!\nIt is recommended that you go to tinyurl.com, paste it where it says "Paste long URL here", then click "Shorten Link", then share that link and/or QR with your friends at the start of your rally.\nPlease test it out beforehand!\nHave fun!');
 }
 // Takes Uint8Array or ArrayBuffer.
 async function urlsafeBase64(data) {
